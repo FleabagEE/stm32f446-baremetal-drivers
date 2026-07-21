@@ -49,14 +49,33 @@ void uart_write_str(const char *s) {
     }
 }
 
-volatile uint8_t rx_byte;
-volatile int rx_flag = 0;
+#define RX_BUF_SIZE 32
 
+volatile uint8_t rx_buf[RX_BUF_SIZE];
+volatile int rx_head = 0;
+volatile int rx_tail = 0;
+
+/* ISR：把收到的 byte 塞進緩衝區（生產者） */
 void USART2_IRQHandler(void) {
-    rx_byte = USART2->DR;   /* 讀 DR 同時自動清 RXNE，不用手動清 */
-    rx_flag = 1;            /* 告訴主程式：有新資料了 */
+    uint8_t byte = USART2->DR;   /* 讀 DR 同時自動清 RXNE */
+    int next_head = (rx_head + 1) % RX_BUF_SIZE;
+    if (next_head != rx_tail) {
+        rx_buf[rx_head] = byte;
+        rx_head = next_head;
+    }
 }
 
+/* 還有資料可讀嗎？（head 追上 tail 代表空的） */
+int rx_available(void) {
+    return rx_head != rx_tail;
+}
+
+/* 從緩衝區取一個 byte（消費者，main() 用） */
+uint8_t rx_pop(void) {
+    uint8_t byte = rx_buf[rx_tail];
+    rx_tail = (rx_tail + 1) % RX_BUF_SIZE;
+    return byte;
+}
 
 int main(void) {
     /* --- Step 1: 開時脈 ---
@@ -93,7 +112,7 @@ int main(void) {
     int last_button = 1;   /* 初始假設「沒按」（B1 有外部上拉，放開讀到 1） */
     int led_on = 0;
 
-    /* --- Step 3: 按鈕切換 LED --- */
+    /* --- Step 3: 按鈕切換 LED + UART echo --- */
     while (1) {
         int button_now = gpio_read(GPIOC, 13);   /* PC13 低電位表示按下去 */
 
@@ -105,11 +124,8 @@ int main(void) {
         delay(1000000);
         last_button = button_now;   /* 記錄這次的狀態，給下一圈迴圈用 */
 
-        if (rx_flag) {
-        uart_write_char(rx_byte);   /* 把收到的字元送回去 */
-        rx_flag = 0;
+        while (rx_available()) {
+            uart_write_char(rx_pop());
         }
-
     }
-
 }
