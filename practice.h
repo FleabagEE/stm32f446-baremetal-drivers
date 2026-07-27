@@ -5,9 +5,11 @@
 #define PERIPH_BASE       0x40000000UL
 #define AHB1PERIPH_BASE   (PERIPH_BASE + 0x00020000UL)
 #define APB1PERIPH_BASE   (PERIPH_BASE + 0x00000000UL)
+#define APB2PERIPH_BASE   (PERIPH_BASE + 0x00010000UL)
 
 #define GPIOA_BASE        (AHB1PERIPH_BASE + 0x0000UL)
 #define GPIOC_BASE        (AHB1PERIPH_BASE + 0x0800UL)
+#define SPI1_BASE         (APB2PERIPH_BASE + 0x3000UL)
 #define RCC_BASE          (AHB1PERIPH_BASE + 0x3800UL)
 #define USART2_BASE       (APB1PERIPH_BASE + 0x4400UL)
 #define NVIC_BASE         (0xE000E100UL)
@@ -31,6 +33,7 @@ typedef struct {
   volatile uint32_t AHB1ENR;          /* 0x30 */
   volatile uint32_t reserved1[3];     /* 0x34~0x3C，跳過 AHB2ENR/AHB3ENR/Reserved */
   volatile uint32_t APB1ENR;          /* 0x40 */
+  volatile uint32_t APB2ENR;          /* 0x44 */
 } RCC_TypeDef;
 
 typedef struct {
@@ -40,13 +43,22 @@ typedef struct {
   volatile uint32_t CR1;
 } USART_TypeDef;
 
+typedef struct {
+  volatile uint32_t CR1;
+  volatile uint32_t CR2;
+  volatile uint32_t SR;
+  volatile uint32_t DR;
+}SPI_TypeDef;
+
 #define GPIOA   ((GPIO_TypeDef *) GPIOA_BASE)
 #define GPIOC   ((GPIO_TypeDef *) GPIOC_BASE)
 #define RCC     ((RCC_TypeDef  *) RCC_BASE)
 #define USART2  ((USART_TypeDef *) USART2_BASE)
+#define SPI1    ((SPI_TypeDef *) SPI1_BASE)
 
 #define RCC_AHB1ENR_GPIOAEN   (1U << 0)
 #define RCC_AHB1ENR_GPIOCEN   (1U << 2)
 #define RCC_APB1ENR_USART2EN  (1U << 17)
+#define RCC_APB2ENR_SPI1EN    (1U << 12)
 
 #endif
