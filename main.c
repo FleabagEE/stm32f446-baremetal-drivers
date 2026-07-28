@@ -1,26 +1,26 @@
-/* main.c ??Nucleo-F446REï¼šLD2 (PA5) é¡¯ç¤º B1 (PC13) ?‰é??€?? *
- * ä¸‰æ­¥é©Ÿï?
- *   1. ??GPIOA / GPIOC ?„æ???(RCC)
- *   2. ??GPIO ?ä??…æ? gpio_init / gpio_write / gpio_read
- *   3. è¿´å?ï¼šè? PC13ï¼Œåµæ¸¬æ?ä¸‹é?ç·?°±?‡æ? PA5
+/* main.c ??Nucleo-F446REï¼šLD2 (PA5) é¡¯ç¤º B1 (PC13) ?ï¿½ï¿½??ï¿½?? *
+ * ä¸‰æ­¥é©Ÿï¿½?
+ *   1. ??GPIOA / GPIOC ?ï¿½ï¿½???(RCC)
+ *   2. ??GPIO ?ï¿½ï¿½??ï¿½ï¿½? gpio_init / gpio_write / gpio_read
+ *   3. è¿´ï¿½?ï¼šï¿½? PC13ï¼Œåµæ¸¬ï¿½?ä¸‹ï¿½?ï¿½?ï¿½ï¿½?ï¿½ï¿½? PA5
  */
 #include "practice.h"
 
-/* ç°¡å–®?„å?ç­?delayï¼ˆä?ç²¾æ?ï¼Œé??ˆå??¨ï?ä¹‹å??ƒç”¨ timer ?–ä»£ï¼?*/
+/* ç°¡å–®?ï¿½ï¿½?ï¿½?delayï¼ˆï¿½?ç²¾ï¿½?ï¼Œï¿½??ï¿½ï¿½??ï¿½ï¿½?ä¹‹ï¿½??ï¿½ç”¨ timer ?ï¿½ä»£ï¿½?*/
 static void delay(volatile uint32_t count) {
     while (count--) {
         __asm volatile("nop");
     }
 }
 
-/* mode: 0=input, 1=output, 2=alternate function, 3=analogï¼ˆå???MODER å®šç¾©ï¼?*/
+/* mode: 0=input, 1=output, 2=alternate function, 3=analogï¼ˆï¿½???MODER å®šç¾©ï¿½?*/
 void gpio_init(GPIO_TypeDef *port, int pin, int mode) {
     port->MODER &= ~(3U << (pin * 2));
     port->MODER |=  ((uint32_t)mode << (pin * 2));
 }
 
 
-/* val ??0 ???‰é?ï¼›val ??0 ???‰ä? */
+/* val ??0 ???ï¿½ï¿½?ï¼›val ??0 ???ï¿½ï¿½? */
 void gpio_write(GPIO_TypeDef *port, int pin, int val) {
     if (val) {
         port->BSRR = (1U << pin);
@@ -29,12 +29,12 @@ void gpio_write(GPIO_TypeDef *port, int pin, int val) {
     }
 }
 
-/* ?žå‚³ä¹¾æ·¨??0 ??1 */
+/* ?ï¿½å‚³ä¹¾æ·¨??0 ??1 */
 int gpio_read(GPIO_TypeDef *port, int pin) {
     return (port->IDR & (1U << pin)) != 0;
 }
 
-/* è¼ªè©¢ç­?TXE=1ï¼ˆç™¼?æš«å­˜å™¨ç©ºä?ï¼‰æ?å¯?DR */
+/* è¼ªè©¢ï¿½?TXE=1ï¼ˆç™¼?ï¿½æš«å­˜å™¨ç©ºï¿½?ï¼‰ï¿½?ï¿½?DR */
 void uart_write_char(char c) {
     while (!(USART2->SR & (1U << 7)));
     USART2->DR = c;
@@ -57,9 +57,9 @@ volatile uint8_t rx_buf[RX_BUF_SIZE];
 volatile int rx_head = 0;
 volatile int rx_tail = 0;
 
-/* ISRï¼šæ??¶åˆ°??byte å¡žé€²ç·©è¡å?ï¼ˆç??¢è€…ï? */
+/* ISRï¼šï¿½??ï¿½åˆ°??byte å¡žé€²ç·©è¡ï¿½?ï¼ˆï¿½??ï¿½è€…ï¿½? */
 void USART2_IRQHandler(void) {
-    uint8_t byte = USART2->DR;   /* è®€ DR ?Œæ??ªå?æ¸?RXNE */
+    uint8_t byte = USART2->DR;   /* è®€ DR ?ï¿½ï¿½??ï¿½ï¿½?ï¿½?RXNE */
     int next_head = (rx_head + 1) % RX_BUF_SIZE;
     if (next_head != rx_tail) {
         rx_buf[rx_head] = byte;
@@ -67,12 +67,12 @@ void USART2_IRQHandler(void) {
     }
 }
 
-/* ?„æ?è³‡æ??¯è??Žï?ï¼ˆhead è¿½ä? tail ä»?¡¨ç©ºç?ï¼?*/
+/* ?ï¿½ï¿½?è³‡ï¿½??ï¿½ï¿½??ï¿½ï¿½?ï¼ˆhead è¿½ï¿½? tail ï¿½?ï¿½ï¿½ç©ºï¿½?ï¿½?*/
 int rx_available(void) {
     return rx_head != rx_tail;
 }
 
-/* å¾žç·©è¡å??–ä???byteï¼ˆæ?è²»è€…ï?main() ?¨ï? */
+/* å¾žç·©è¡ï¿½??ï¿½ï¿½???byteï¼ˆï¿½?è²»è€…ï¿½?main() ?ï¿½ï¿½? */
 uint8_t rx_pop(void) {
     uint8_t byte = rx_buf[rx_tail];
     rx_tail = (rx_tail + 1) % RX_BUF_SIZE;
@@ -126,15 +126,15 @@ void uart_write_hex8(uint8_t x)
 
 
 int main(void) {
-    /* --- Step 1: ?‹æ???---
-     * ?±é??è¨­?¯é??„ï??é›»ï¼‰ï??¨ä??ä?å®šè??ˆåœ¨ RCC ?‹æ??ˆã€?*/
+    /* --- Step 1: ?ï¿½ï¿½???---
+     * ?ï¿½ï¿½??ï¿½è¨­?ï¿½ï¿½??ï¿½ï¿½??ï¿½é›»ï¼‰ï¿½??ï¿½ï¿½??ï¿½ï¿½?å®šï¿½??ï¿½åœ¨ RCC ?ï¿½ï¿½??ï¿½ï¿½?*/
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN;
     RCC->AHB1ENR |= RCC_AHB1ENR_GPIOCEN;
     RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
     
 
 
-    /* --- Step 2: è¨­å? pin æ¨¡å? --- */
+    /* --- Step 2: è¨­ï¿½? pin æ¨¡ï¿½? --- */
     
     gpio_init(GPIOA, 2, 2);
     gpio_init(GPIOA, 3, 2);
@@ -142,7 +142,7 @@ int main(void) {
 
     GPIOA->AFRL &= ~(15U << (2 * 4));
     GPIOA->AFRL |= (7U << (2 * 4));
-    GPIOA->AFRL &= ~(15U << (3 * 4));   /* æ¸?pin3 ?„æ?ä½?*/
+    GPIOA->AFRL &= ~(15U << (3 * 4));   /* ï¿½?pin3 ?ï¿½ï¿½?ï¿½?*/
     GPIOA->AFRL |= (7U << (3 * 4));
 
     
@@ -162,28 +162,35 @@ int main(void) {
 
     uart_write_str("Hello\r\n");
 
-    //int last_button = 1;   /* ?å??‡è¨­?Œæ??‰ã€ï?B1 ?‰å??¨ä??‰ï??¾é?è®€??1ï¼?*/
+    //int last_button = 1;   /* ?ï¿½ï¿½??ï¿½è¨­?ï¿½ï¿½??ï¿½ã€ï¿½?B1 ?ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½?è®€??1ï¿½?*/
     //int led_on = 0;
-    uint8_t r = spi1_transfer(0xAB);
-    uart_write_str("SPI="); 
-    uart_write_hex8(r);
-    uart_write_str("\r\n");
+    //uint8_t r = spi1_transfer(0xAB);
+    //uart_write_str("SPI="); 
+    //uart_write_hex8(r);
+    //uart_write_str("\r\n");
 
-    /* --- Step 3: ?‰é??‡æ? LED + UART echo --- */
+    /* --- Step 3: ?ï¿½ï¿½??ï¿½ï¿½? LED + UART echo --- */
     while (1) {
-        //int button_now = gpio_read(GPIOC, 13);   /* PC13 ä½Žé›»ä½è¡¨ç¤ºæ?ä¸‹åŽ» */
+        //int button_now = gpio_read(GPIOC, 13);   /* PC13 ä½Žé›»ä½è¡¨ç¤ºï¿½?ä¸‹åŽ» */
 
         //if (button_now == 0 && last_button == 1) {
-        //    led_on = !led_on;   /* ?µæ¸¬?°ã€Œæ”¾?‹â??‰ä??ç??Šç·£ï¼Œæ??‡æ? */
+        //    led_on = !led_on;   /* ?ï¿½æ¸¬?ï¿½ã€Œæ”¾?ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½??ï¿½ç·£ï¼Œï¿½??ï¿½ï¿½? */
         //}
 
-       // gpio_write(GPIOA, 5, led_on);   /* PA5 ??Ž¥ LD2ï¼Œæ?é«˜äº®?ˆï??‰ä??„ç? */
+       // gpio_write(GPIOA, 5, led_on);   /* PA5 ??ï¿½ï¿½ LD2ï¼Œï¿½?é«˜äº®?ï¿½ï¿½??ï¿½ï¿½??ï¿½ï¿½? */
         //delay(1000000);
-        //last_button = button_now;   /* è¨˜é??™æ¬¡?„ç??‹ï?çµ¦ä?ä¸€?ˆè¿´?ˆç”¨ */
+        //last_button = button_now;   /* è¨˜ï¿½??ï¿½æ¬¡?ï¿½ï¿½??ï¿½ï¿½?çµ¦ï¿½?ä¸€?ï¿½è¿´?ï¿½ç”¨ */
 
 
         while (rx_available()) {
-            uart_write_char(rx_pop());
+            uint8_t cmd = rx_pop();
+
+            if (cmd == 'S') {
+                uint8_t r = spi1_transfer(0xAB);
+                uart_write_char((char)r);
+            } else {
+                uart_write_char((char)cmd);
+            }
         }
     }
 
