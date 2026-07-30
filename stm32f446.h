@@ -20,6 +20,9 @@
 #define GPIOA_BASE        (AHB1PERIPH_BASE + 0x0000UL)   /* 0x40020000 */
 #define RCC_BASE          (AHB1PERIPH_BASE + 0x3800UL)   /* 0x40023800 */
 
+#define APB2PERIPH_BASE   (PERIPH_BASE + 0x00010000UL)
+#define SPI1_BASE         (APB2PERIPH_BASE + 0x3000UL)
+
 /* ---- 用 struct 疊出 register block ----
  * 把連續的暫存器用 struct 描述，欄位順序 = 記憶體位址順序。
  * volatile 必須加：告訴編譯器這些值硬體會改，不准做快取優化。
@@ -41,6 +44,14 @@ typedef struct {
   volatile uint32_t reserved0[12];  /* 0x00~0x2C：跳過不用的 */
   volatile uint32_t AHB1ENR;        /* 0x30: AHB1 週邊時脈開關 */
 } RCC_TypeDef;
+
+/* SPI register block (RM0390 §21.3) */
+typedef struct {
+  volatile uint32_t CR1;
+  volatile uint32_t CR2;
+  volatile uint32_t SR;
+  volatile uint32_t DR;
+} SPI_TypeDef;
 
 /* ---- 把 base 位址 cast 成 struct 指標 ----
  * 之後就能用 GPIOA->MODER 這種寫法，等同直接操作那個位址。
