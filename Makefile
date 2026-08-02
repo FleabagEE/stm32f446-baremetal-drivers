@@ -1,29 +1,23 @@
-# Makefile — STM32F446RE bare-metal blink
-#
-# 用法：
-#   make          → 編譯，產生 blink.elf 和 blink.bin
-#   make flash    → 用 OpenOCD 燒進板子
-#   make clean    → 清掉產生的檔案
+# Makefile - STM32F446RE bare-metal project
 
-# ---- 工具鏈 ----
 CC      = arm-none-eabi-gcc
 OBJCOPY = arm-none-eabi-objcopy
 
-# ---- CPU 旗標 ----
-# Cortex-M4 + 硬體浮點；-mthumb 因為 Cortex-M 只跑 Thumb
 CPU = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard
+INCLUDES = -IFreeRTOS/include -IFreeRTOS -I. -IFreeRTOS/portable/GCC/ARM_CM4F
+CFLAGS  = $(CPU) $(INCLUDES) -Wall -g -O0 -ffreestanding 
+LDFLAGS = -T linker.ld -nostartfiles
 
-# ---- 編譯旗標 ----
-# -nostdlib：不連標準庫（bare-metal，自己控制一切）
-# -ffreestanding：告訴編譯器沒有 OS
-# -T linker.ld：用我們自己的 linker script
-CFLAGS  = $(CPU) -Wall -g -O0 -ffreestanding -nostdlib
-LDFLAGS = -T linker.ld -nostdlib
+SRCS = main.c startup.s mem.c system_stubs.c \
+       FreeRTOS/tasks.c \
+       FreeRTOS/queue.c \
+       FreeRTOS/list.c \
+       FreeRTOS/timers.c \
+       FreeRTOS/portable/GCC/ARM_CM4F/port.c \
+       FreeRTOS/portable/MemMang/heap_4.c
 
-SRCS = main.c startup.s
 TARGET = blink
 
-# ---- 編譯 ----
 all: $(TARGET).bin
 
 $(TARGET).elf: $(SRCS) linker.ld
@@ -32,9 +26,6 @@ $(TARGET).elf: $(SRCS) linker.ld
 $(TARGET).bin: $(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
 
-# ---- 燒錄 ----
-# 舊版 OpenOCD (0.10) 用 stlink-v2-1.cfg；新版用 stlink.cfg
-# 你目前是 0.10，所以用 stlink-v2-1.cfg
 flash: $(TARGET).elf
 	openocd -f interface/stlink-v2-1.cfg -f target/stm32f4x.cfg \
 	  -c "program $(TARGET).elf verify reset exit"

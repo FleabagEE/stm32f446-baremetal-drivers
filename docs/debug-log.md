@@ -108,3 +108,99 @@ Both cases pass; no bytes dropped.
 ## Takeaway
 
 `rx_byte`/`rx_flag` is what a naive "shared variable between ISR and main loop" pattern looks like, and it silently breaks the moment data arrives faster than the consumer checks it — which is *exactly* the failure mode that motivates using a proper queue between an ISR and a task. This ring buffer is a manual, single-producer/single-consumer preview of what a FreeRTOS queue formalizes (bounded buffer + safe hand-off between an interrupt context and task context) — planned for Week 4.
+
+---
+
+# Debug Log: FreeRTOS Port Boots Into UsageFault Before main()
+
+## Problem
+
+After integrating the FreeRTOS kernel skeleton, the board flashed successfully but appeared dead at runtime:
+
+- UART echo tests all failed: Python sent data but received `b''`.
+- SPI loopback test failed because the UART command path did not respond.
+- B1 / PA5 LED behavior also appeared inactive.
+
+## Initial Misread
+
+The first likely suspects were the UART driver, USART2 interrupt setup, FreeRTOS vector ownership, or a half-finished scheduler setup. That was misleading because the symptom looked like a peripheral/runtime problem.
+
+## Real Root Cause
+
+The CPU never reached `main()`.
+
+The hand-written `startup.s` `.data` copy loop incremented only the offset register `r3`, but its termination check compared the unchanged destination pointer `r0` against `_edata`:
+
+```asm
+copy_data:
+  cmp r0, r1
+  bge zero_bss
+  ldr r4, [r2, r3]
+  str r4, [r0, r3]
+  adds r3, r3, #4
+  b copy_data
+```
+
+`r0` stayed at `_sdata`, so the loop condition never changed. The offset kept growing until the code wrote past valid SRAM and triggered a UsageFault. Since this happened in `Reset_Handler`, `main()` never ran.
+
+## How It Was Found
+
+GDB backtrace made the failure concrete:
+
+```text
+Program received signal SIGINT, Interrupt.
+UsageFault_Handler () at startup.s:78
+
+bt:
+#0 UsageFault_Handler
+#1 <signal handler called>
+#2 copy_data () at startup.s:51
+#3 <signal handler called>
+```
+
+The register dump was the giveaway:
+
+```text
+r0 = 0x20000000   // _sdata
+r1 = 0x20000008   // _edata
+r2 = 0x08005718   // _sidata
+r3 = 0x00020004   // offset had grown far past the 8-byte .data region
+```
+
+The `.data` region was only 8 bytes, but the offset had grown to `0x20004`, proving the copy loop did not terminate.
+
+## Fix
+
+The immediate fix was to advance the source and destination pointers themselves, so the comparison against `_edata` can terminate correctly:
+
+```asm
+copy_data:
+  cmp r0, r1
+  bge zero_bss
+  ldr r4, [r2]
+  str r4, [r0]
+  adds r0, r0, #4
+  adds r2, r2, #4
+  b copy_data
+```
+
+After the lesson was captured, the project was moved back to an official STM32F446xx GCC startup template so the boot foundation is no longer hand-rolled.
+
+## Related Issues
+
+- ST-LINK firmware was too old for `ST-LINK_gdbserver`:
+  - Before: `V2J33M25`
+  - After upgrade: `V2J47M34`
+  - Fixed with `STLinkUpgrade.jar`.
+
+- FreeRTOS uses `memcpy` / `memset` internally. In the bare-metal `-nostdlib` style, those symbols were missing, so a minimal `mem.c` was added.
+
+## Takeaway
+
+When peripherals appear dead after a startup or linker change, first prove that the CPU reaches `main()`. GDB backtrace is the fastest way to distinguish:
+
+```text
+peripheral bug vs. startup fault vs. exception handler trap
+```
+
+This case was not a UART bug and not a FreeRTOS scheduler bug. It was a boot-time `.data` initialization bug.
