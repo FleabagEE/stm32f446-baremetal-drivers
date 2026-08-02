@@ -4,7 +4,20 @@
  *   2. ??GPIO ?��??��? gpio_init / gpio_write / gpio_read
  *   3. 迴�?：�? PC13，偵測�?下�?�?��?��? PA5
  */
+
 #include "practice.h"
+#include "FreeRTOS.h"      // 加這行
+#include "task.h"          // 加這行（TaskHandle_t、xTaskCreate 都在這）
+#include "queue.h"         // 加這行（之後 ISR→Queue 會用到，先加著）
+
+
+void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName) {
+    (void)xTask; (void)pcTaskName;
+    for (;;);   // stack 爆了會停這，debugger 看得到
+}
+void vApplicationMallocFailedHook(void) {
+    for (;;);   // heap 不夠會停這
+}
 
 /* 簡單?��?�?delay（�?精�?，�??��??��?之�??�用 timer ?�代�?*/
 static void delay(volatile uint32_t count) {
