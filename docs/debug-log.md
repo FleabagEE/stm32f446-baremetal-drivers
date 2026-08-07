@@ -204,3 +204,33 @@ peripheral bug vs. startup fault vs. exception handler trap
 ```
 
 This case was not a UART bug and not a FreeRTOS scheduler bug. It was a boot-time `.data` initialization bug.
+
+
+## FreeRTOS UART Queue Echo Test：Task 輸出干擾測試
+
+### 問題
+
+FreeRTOS UART queue echo 測試時，Python 測試失敗：
+
+- single byte echo：送 `A`，卻收到 `T`
+- multi byte echo：送 `Hello`，卻收到 `ask B`
+- SPI loopback：送 `S`，期待 `0xAB`，卻收到其他字元
+
+### 誤判方向
+
+一開始可能以為：
+
+- UART ISR 壞了
+- Queue 沒收到資料
+- SPI loopback 壞了
+- FreeRTOS scheduler 有問題
+
+但其實 scheduler 是正常的。
+
+### 真正原因
+
+之前用來驗證 scheduler 的 `task_A` / `task_B` 還在背景印：
+
+```text
+Task A
+Task B
