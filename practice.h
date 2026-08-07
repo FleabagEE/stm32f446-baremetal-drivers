@@ -14,6 +14,8 @@
 #define USART2_BASE       (APB1PERIPH_BASE + 0x4400UL)
 #define NVIC_BASE         (0xE000E100UL)
 #define NVIC        ((uint32_t *) NVIC_BASE)
+#define NVIC_IPR_BASE     (0xE000E400UL)
+#define NVIC_IPR          ((volatile uint8_t *) NVIC_IPR_BASE)
 
 typedef struct {
   volatile uint32_t MODER;
